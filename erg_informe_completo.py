@@ -180,7 +180,7 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
     ojo_der = subgrupo['OjoDerecho'].values
 
     for señal, ax, ojo_nombre in [(ojo_izq, ax_osci_izq, "Ojo izquierdo"), (ojo_der, ax_osci_der, "Ojo derecho")]:
-        idx_inicio = np.argmax(tiempo >= UMBRAL_TIEMPO)
+        idx_inicio = np.argmax(tiempo >= 0.11)
         señal_post = señal[idx_inicio:]
         picos, _ = find_peaks(señal_post)
 
@@ -347,7 +347,7 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
     ojo_der = subgrupo['OjoDerecho'].values
 
     for señal, ax, ojo_nombre in [(ojo_izq, ax_flicker_izq, "Ojo izquierdo"), (ojo_der, ax_flicker_der, "Ojo derecho")]:
-        idx_inicio = np.argmax(tiempo >= 0.25)
+        idx_inicio = np.argmax(tiempo >= 0.2)
         señal_post = señal[idx_inicio:]
         tiempo_post = tiempo_ms[idx_inicio:]
         picos_pos, _ = find_peaks(señal_post, prominence=20)
@@ -408,10 +408,45 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
         row[1].text = res['Tipo']
         row[2].text = res['Valor (µV)']
         row[3].text = res['Tiempo (ms)']
+
+
+    # ====== Información prueba ======
+    doc.add_heading("Información sobre la prueba", level=1)
+    doc.add_paragraph(
+        "Las intensidades de los estímulos usados durante las pruebas ERG se detallan a continuación, expresadas en cd·s·m⁻² y su correspondiente estímulo en mV:" 
+    )
+
+    tabla_info = doc.add_table(rows=1, cols=3)
+    tabla_info.style = 'Table Grid'
+    hdr = tabla_info.rows[0].cells
+    hdr[0].text = 'Grupo'
+    hdr[1].text = 'Intensidad (cd·s·m⁻²)'
+    hdr[2].text = 'Estimulación (mV)'
+
+    datos_intensidad = {
+        1: ("0,0001", "2,45"),
+        2: ("0,009", "2,55"),
+        3: ("0,1013", "2,65"),
+        4: ("0,9912", "3,25"),
+        5: ("3,1724", "5"),
+        6: ("3,1724", "5"),
+        7: ("0,9912", "3,25"),
+        8: ("3,1724", "5"),
+        9: ("3,1724", "5")
+    }
+
+    for grupo, (intensidad, estimulo) in datos_intensidad.items():
+        row = tabla_info.add_row().cells
+        row[0].text = grupo_nombres[grupo]
+        row[1].text = f"{intensidad} cd·s·m⁻²"
+        row[2].text = f"{estimulo} mV"
+    
     output = io.BytesIO()
     doc.save(output)
     output.seek(0)
     return output
+
+
 
 
 def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
