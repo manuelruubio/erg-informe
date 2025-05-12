@@ -1,13 +1,12 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import io
-from docx import Document
-from docx.shared import Inches
-from scipy.signal import find_peaks
-import os
-import streamlit as st
-
 def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nombres, UMBRAL_TIEMPO=0.1):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import io
+    from docx import Document
+    from docx.shared import Inches
+    from scipy.signal import find_peaks
+    import os
+
     doc = Document()
     doc.add_heading("Informe de señales ERG", 0)
     doc.add_paragraph(f"Nombre del ratón: {nombre_raton}")
@@ -41,8 +40,6 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
             ax.plot(tiempo_ms, señal, label=nombre)
             ax.plot(tiempo_ms[inicio_b_idx], señal[inicio_b_idx], 'mo')
             ax.plot(tiempo_ms[pico_b_idx], señal[pico_b_idx], 'ro')
-
-
 
             resultados_escotopico.append({
                 "Grupo": nombre,
@@ -87,8 +84,7 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
         row[3].text = res['Pico onda b (ms)']
         row[4].text = res['Amplitud onda b (µV)']
 
-
-     # ====== MESÓPICO ======
+    # ====== MESÓPICO ======
     doc.add_page_break() #salto de pagina
 
     doc.add_heading("2. Mesópico", level=1)
@@ -413,8 +409,13 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
         row[2].text = res['Valor (µV)']
         row[3].text = res['Tiempo (ms)']
 
-    # Tabla de condiciones experimentales
-    doc.add_heading("Condiciones experimentales", level=1)
+
+    # ====== Información prueba ======
+    doc.add_heading("Información sobre la prueba", level=1)
+    doc.add_paragraph(
+        "Las intensidades de los estímulos usados durante las pruebas ERG se detallan a continuación, expresadas en cd·s·m⁻² y su correspondiente estímulo en mV:" 
+    )
+
     tabla_info = doc.add_table(rows=1, cols=3)
     tabla_info.style = 'Table Grid'
     hdr = tabla_info.rows[0].cells
@@ -439,17 +440,13 @@ def generar_informe_word_completo(data, nombre_raton, info_adicional, grupo_nomb
         row[0].text = grupo_nombres[grupo]
         row[1].text = f"{intensidad} cd·s·m⁻²"
         row[2].text = f"{estimulo} mV"
-
+    
     output = io.BytesIO()
     doc.save(output)
     output.seek(0)
-
-    # Eliminar imágenes temporales
-    for f in [path_izq, path_der]:
-        if os.path.exists(f):
-            os.remove(f)
-
     return output
+
+
 
 
 def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
@@ -458,16 +455,8 @@ def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
     from scipy.signal import find_peaks
     import streamlit as st
 
-    diferenciales_pzfx = {
-        "Escotópico onda B GRAPHS": [],
-        "Mesopico onda B GRAPHS": [],
-        "Mesópico onda A GRAPHS": [],
-        "Fotópico onda B GRAPHS": []
-    }
-
     grupos_con_onda_a = [4, 5, 7, 8]
     grupos = sorted(data['Grupo'].unique())
-
     for grupo in grupos:
         nombre = grupo_nombres[grupo]
         subgrupo = data[data['Grupo'] == grupo]
@@ -524,7 +513,6 @@ def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
             pico_b_valor = señal[pico_b_idx]
             ax.plot(tiempo_ms, señal, label='Señal ojo izquierdo')
             ax.axvline(tiempo_ms[idx_inicio], linestyle='--', color='gray', label='Inicio 100ms')
-
             if grupo in grupos_con_onda_a:
                 señal_a = señal[idx_inicio:pico_b_idx]
                 pico_a_rel = np.argmin(señal_a)
@@ -532,24 +520,11 @@ def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
                 inicio_b_idx = pico_a_idx
                 ax.plot(tiempo_ms[idx_inicio], señal[idx_inicio], 'ko', label='Inicio onda a')
                 ax.plot(tiempo_ms[pico_a_idx], señal[pico_a_idx], 'go', label='Pico onda a')
-
-                delta_b = pico_b_valor - señal[pico_a_idx]
-                delta_a = señal[idx_inicio] - señal[pico_a_idx]
-
-                if grupo in [4, 5]:
-                    diferenciales_pzfx["Mesopico onda B GRAPHS"].append(round(float(delta_b), 2))
-                    diferenciales_pzfx["Mesópico onda A GRAPHS"].append(round(float(delta_a), 2))
-                elif grupo in [7, 8]:
-                    diferenciales_pzfx["Fotópico onda B GRAPHS"].append(round(float(delta_b), 2))
             else:
                 señal_inicial = señal[idx_inicio:pico_b_idx]
                 min_rel = np.argmin(señal_inicial)
                 inicio_b_idx = idx_inicio + min_rel
-                ax.plot(tiempo_ms[inicio_b_idx], señal[inicio_b_idx], 'mo', label='Inicio onda b')
-                delta_b = pico_b_valor - señal[inicio_b_idx]
-                if grupo in [1, 2, 3]:
-                    diferenciales_pzfx["Escotópico onda B GRAPHS"].append(round(float(delta_b), 2))
-
+            ax.plot(tiempo_ms[inicio_b_idx], señal[inicio_b_idx], 'mo', label='Inicio onda b')
             ax.plot(tiempo_ms[pico_b_idx], señal[pico_b_idx], 'ro', label='Pico onda b')
 
         ax.set_title(nombre)
@@ -558,9 +533,3 @@ def mostrar_graficas_ojo_izquierdo(data, grupo_nombres, UMBRAL_TIEMPO=0.1):
         ax.legend()
         ax.grid()
         st.pyplot(fig)
-
-    print("➡️ Diferenciales extraídos:")
-    for k, v in diferenciales_pzfx.items():
-        print(f"{k}: {v}")
-
-    return diferenciales_pzfx
